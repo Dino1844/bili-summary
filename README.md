@@ -40,10 +40,11 @@ NoteTaker-py 六个项目，它们**全部采用"固定间隔抽帧"**（6s / 10
   ├─ S4 笔记   describe/  MiniMax M3 逐窗口融合(同页合并 + 逐页结构化笔记)
   │                       → 跨窗口 + 基于图像的全局去重
   │
-  ├─ S5 教学   teach/     学习目标(布鲁姆) / 闪卡 / 测验 / 思维导图 / 间隔重复计划
-  ├─ S5.1 讲稿 teach/     把逐页笔记重写成**一篇连贯讲稿**, 自动滤掉过程性噪音
+  ├─ S5 知识   knowledge/ 概念体系(概念卡/依赖图/易错点) + 讲义完整性检查
+  ├─ S5.1 教学 teach/     学习目标(布鲁姆) / 闪卡 / 测验 / 思维导图 / 间隔重复计划
+  ├─ S5.2 讲义 teach/     把逐页笔记重写成**一篇连贯文章**, 自动滤掉过程性噪音
   │
-  └─ S6 报告   assemble/  report.html(正文=讲稿 + 可折叠附录 + 内嵌图) + notes.md
+  └─ S6 报告   assemble/  lecture.html(独立讲义) + report.html(逐页笔记) + notes.md
 ```
 
 ### 为什么需要"讲稿"
@@ -62,6 +63,8 @@ work/<视频ID>/
 │   ├── lecture.md       讲义 Markdown 源
 │   ├── report.html      结构化报告：逐页笔记(含图)
 │   ├── notes.md         逐页笔记(结构化)
+│   ├── concepts.md      **概念体系**：概念卡 + 依赖图 + 易错点（"按知识"而非"按页"）
+│   ├── coverage.md      讲义完整性检查(每页知识点是否都进了讲义)
 │   ├── learning_pack.md 学习目标 + 费曼提示 + 知识关联
 │   ├── flashcards.md    闪卡(主动回忆)
 │   ├── quiz.md          提取练习测验(含答案解析)
@@ -118,7 +121,8 @@ bili-summary segment eval --video V --workdir W --n 16    # 切点对照图, 人
 bili-summary enrich  --workdir W [--crop]                 # S3 素材
 bili-summary describe --workdir W [--window 6] [--jobs 4] # S4 逐页笔记
 bili-summary dedup   --workdir W [--threshold 0.08]       # 按图像全局去重(M3 确认)
-bili-summary teach   --workdir W [--jobs 3]               # S5 教学包
+bili-summary knowledge --workdir W [--only concepts|coverage]  # S5 概念体系 / 完整性检查
+bili-summary teach   --workdir W [--jobs 3]               # S5.1 教学包
 bili-summary lecture --workdir W [--jobs 4] [--sections N] # S5.1 讲义
 bili-summary render  --workdir W [--math inline|cdn|none] # ★ 不调 M3: 重渲染 HTML(改样式/修公式)
 bili-summary report  --workdir W [--title T] [--url U]    # S6 报告

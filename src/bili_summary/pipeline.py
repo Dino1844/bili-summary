@@ -17,6 +17,7 @@ from rich.panel import Panel
 from . import assemble as assemble_mod
 from . import describe as describe_mod
 from . import enrich as enrich_mod
+from . import knowledge as knowledge_mod
 from . import teach as teach_mod
 from .acquire import bilibili
 from .acquire import download as dl
@@ -29,7 +30,17 @@ from .workspace import Workspace
 
 app = typer.Typer(help="全流程编排", no_args_is_help=True)
 
-STAGES = ["download", "transcript", "segment", "enrich", "describe", "teach", "lecture", "report"]
+STAGES = [
+    "download",
+    "transcript",
+    "segment",
+    "enrich",
+    "describe",
+    "knowledge",
+    "teach",
+    "lecture",
+    "report",
+]
 
 
 # ---------------------------------------------------------------- helpers
@@ -134,7 +145,7 @@ def run(
     # --- download
     if is_url:
         if start <= 0:
-            rprint("[bold cyan][1/8] 下载视频[/]")
+            rprint("[bold cyan][1/9] 下载视频[/]")
         info = dl.download(source, ws.source, max_height=max_height)
         if start <= 0:
             rprint(f"  {info['title']}  ({info.get('duration')}s)")
@@ -149,14 +160,14 @@ def run(
 
     # --- transcript
     if start <= 1:
-        rprint("[bold cyan][2/8] 获取字幕/转录[/]")
+        rprint("[bold cyan][2/9] 获取字幕/转录[/]")
         build_transcript(
             source, ws.root, video, model=asr_model, device=device, force=(force_from == "transcript")
         )
 
     # --- segment
     if start <= 2:
-        rprint("[bold cyan][3/8] 按 PPT 切分[/]")
+        rprint("[bold cyan][3/9] 按 PPT 切分[/]")
         if ws.segments_json.exists() and force_from != "segment":
             res = SegmentationResult.model_validate_json(ws.segments_json.read_text())
         else:
@@ -168,34 +179,47 @@ def run(
 
     # --- enrich
     if start <= 3:
-        rprint("[bold cyan][4/8] 素材装配[/]")
+        rprint("[bold cyan][4/9] 素材装配[/]")
         mats = enrich_mod.build_materials(ws.root, crop=crop)
         rprint(f"  素材={len(mats)} 段 (有讲稿 {sum(1 for m in mats if m.n_chars > 0)})")
 
     # --- describe
     if start <= 4:
-        rprint("[bold cyan][5/8] M3 逐页笔记[/]")
+        rprint("[bold cyan][5/9] M3 逐页笔记[/]")
         slides = describe_mod.fuse(ws.root, window=window, limit=limit, jobs=jobs)
         rprint(f"  幻灯片={len(slides)} 页")
         m3.flush_usage(ws.root, "describe")
 
+    # --- knowledge (概念体系)
+    if start <= 5:
+        rprint("[bold cyan][6/9] 知识层: 概念体系[/]")
+        c = knowledge_mod.build_concepts(ws.root, title=title or ws.root.name)
+        rprint(f"  概念体系 {c['concepts']} 个概念" + ("，含依赖图" if c["graph"] else ""))
+        m3.flush_usage(ws.root, "knowledge")
+
     # --- teach
-    if start <= 5 and not no_teach:
-        rprint("[bold cyan][6/8] 教学增强包[/]")
+    if start <= 6 and not no_teach:
+        rprint("[bold cyan][7/9] 教学增强包[/]")
         t = teach_mod.build_teaching_pack(ws.root, title=title or ws.root.name, jobs=jobs)
         rprint(f"  学习目标={t['objectives']} 闪卡={t['flashcards']} 测验={t['quiz']} 题")
         m3.flush_usage(ws.root, "teach")
 
     # --- lecture
-    if start <= 6 and not no_teach:
-        rprint("[bold cyan][7/8] 生成讲稿[/]")
+    if start <= 7 and not no_teach:
+        rprint("[bold cyan][8/9] 生成讲稿[/]")
         lec = teach_mod.build_lecture(ws.root, title=title or ws.root.name, jobs=jobs)
         rprint(f"  讲稿 {lec['sections']} 章, {lec['chars']} 字")
         m3.flush_usage(ws.root, "lecture")
 
-    # --- report
-    if start <= 7:
-        rprint("[bold cyan][8/8] 生成报告[/]")
+    # --- report (含讲义完整性检查)
+    if start <= 8:
+        if ws.lecture_md.exists():
+            try:
+                cov = knowledge_mod.check_coverage(ws.root)
+                rprint(f"  讲义覆盖度 均值 {cov['mean_coverage']:.2f}，可疑页 {len(cov['weak_pages'])} 个")
+            except Exception as e:
+                rprint(f"  [yellow]覆盖率检查跳过: {type(e).__name__}[/]")
+        rprint("[bold cyan][9/9] 生成报告[/]")
         r = assemble_mod.build_report(
             ws.root, title=title or ws.root.name, video_url=source if is_url else ""
         )
@@ -333,6 +357,30 @@ def render(
     else:
         rprint("[yellow]没有 lecture.md, 跳过 lecture.html[/]")
     ws.write_index(t)
+
+
+@app.command()
+def knowledge(
+    workdir: str = typer.Option(..., "--workdir"),
+    title: str = typer.Option("", "--title"),
+    only: str = typer.Option(None, "--only", help="concepts | coverage"),
+) -> None:
+    """知识层: 概念体系(概念卡/依赖图/易错点) + 讲义完整性检查."""
+    ws = Workspace(workdir).ensure()
+    t = title or ws.root.name
+    if only in (None, "concepts"):
+        c = knowledge_mod.build_concepts(ws.root, title=t)
+        rprint(f"[green]概念体系[/] {c['concepts']} 个概念" + ("，含依赖图" if c["graph"] else ""))
+        m3.flush_usage(ws.root, "knowledge")
+    if only in (None, "coverage"):
+        if ws.lecture_md.exists():
+            cov = knowledge_mod.check_coverage(ws.root)
+            rprint(
+                f"[green]覆盖率[/] 均值 {cov['mean_coverage']:.2f}，"
+                f"可疑页 {len(cov['weak_pages'])} 个 -> {ws.coverage_md}"
+            )
+        else:
+            rprint("[yellow]没有 lecture.md, 跳过覆盖率检查[/]")
 
 
 @app.command()

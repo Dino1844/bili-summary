@@ -53,6 +53,10 @@ _MIGRATE = {
     "quiz.md": "final",
     "mindmap.mmd": "final",
     "study_plan.md": "final",
+    "concepts.md": "final",
+    "concepts.json": "data",
+    "coverage.json": "data",
+    "coverage.md": "final",
     "report.html": "final",
     "lecture.html": "final",
 }
@@ -191,6 +195,23 @@ class Workspace:
     @property
     def study_plan_md(self) -> Path:
         return self.final / "study_plan.md"
+
+    # ---- 知识层(概念体系 / 覆盖率) ----
+    @property
+    def concepts_md(self) -> Path:
+        return self.final / "concepts.md"
+
+    @property
+    def concepts_json(self) -> Path:
+        return self.data / "concepts.json"
+
+    @property
+    def coverage_json(self) -> Path:
+        return self.data / "coverage.json"
+
+    @property
+    def coverage_md(self) -> Path:
+        return self.final / "coverage.md"
 
     # ---------------------------------------------------------- 路径解析
     def resolve(self, p: str | Path) -> Path:

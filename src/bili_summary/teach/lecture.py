@@ -107,7 +107,12 @@ def _resolve_images(text: str, page_to_img: dict[int, str]) -> str:
 
 
 def _section_script(
-    client: M3, title: str, sec: dict, pages: list[int], slides: list[dict], words: int
+    client: M3,
+    title: str,
+    sec: dict,
+    pages: list[int],
+    slides: list[dict],
+    words: int,
 ) -> str:
     material = "\n\n".join(_page_material(slides[p - 1], p) for p in pages)
     prompt = SCRIPT_PROMPT.format(

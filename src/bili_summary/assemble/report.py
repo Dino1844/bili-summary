@@ -61,10 +61,12 @@ def appendix_items(
     out: list[tuple[str, str]] = []
     for name, fn in (
         ("逐页笔记（结构化）", "notes.md"),
+        ("概念体系（概念卡 + 依赖图）", "concepts.md"),
         ("学习目标与费曼提示", "learning_pack.md"),
         ("闪卡（主动回忆）", "flashcards.md"),
         ("测验（提取练习）", "quiz.md"),
         ("复习计划", "study_plan.md"),
+        ("讲义完整性检查", "coverage.md"),
     ):
         if fn in skip:
             continue

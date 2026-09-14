@@ -22,8 +22,7 @@ def _write_cookies(path: Path, sessdata_val: str) -> None:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        "# Netscape HTTP Cookie File\n"
-        f".bilibili.com\tTRUE\t/\tTRUE\t0\tSESSDATA\t{sessdata_val}\n",
+        f"# Netscape HTTP Cookie File\n.bilibili.com\tTRUE\t/\tTRUE\t0\tSESSDATA\t{sessdata_val}\n",
         encoding="utf-8",
     )
     os.chmod(path, 0o600)
