@@ -26,6 +26,10 @@ window.MathJax = {
   },
   svg: { fontCache: 'local' },          /* SVG 输出, 不需要字体文件, 适合单文件离线 */
   options: {
+    /* locale 固定为 en: MathJax 默认会按 document.documentElement.lang 去 XHR 拉
+       localization/<lang>.js; 内嵌单文件时那个相对路径必然 404 且每次加载都发一次请求。
+       en 的字符串是内置的, 设置后完全不发本地化请求。 */
+    locale: 'en',
     enableMenu: false,
     skipHtmlTags: ['script','noscript','style','textarea','pre','code']
   }
@@ -253,7 +257,7 @@ def render_shell(
         )
     return f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{esc(title)}</title><style>{CSS}</style></head><body><div class="wrap">
+<link rel="icon" href="data:,"><title>{esc(title)}</title><style>{CSS}</style></head><body><div class="wrap">
 <h1>{esc(title)}</h1>
 <p class="lead">{esc(lead)}</p>
 <main>{main_html}</main>

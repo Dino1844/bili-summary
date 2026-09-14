@@ -74,6 +74,21 @@ work/<视频ID>/
 
 所有路径只在 `workspace.py` 里定义一次；旧版平铺目录会在首次运行时**自动迁移**到该布局。
 
+### 怎么看生成的 HTML
+`lecture.html` / `report.html` 是**自包含单文件**（图片与 MathJax 全部内嵌），
+**直接双击用浏览器打开（`file://`）即可，不需要任何服务器**。
+
+> ⚠️ **不要用 VS Code Live Server / Live Preview 打开**。这类扩展会：
+> 1) 往页面注入 livereload 脚本（WebSocket 回 `127.0.0.1`），并在**工作区文件变化时自动刷新**；
+> 2) 每次刷新都要重新传输 5–15MB 的单文件页面。
+> 表现就是"页面不断刷新、终端里一直刷 127.0.0.1 的请求"。
+>
+> 确实需要 HTTP 服务时，用 `python -m http.server`（无注入、无自动刷新），
+> 并把服务根目录设为**只包含该 HTML 的目录**。
+
+MathJax 侧也已做处理：固定 `options.locale = 'en'`（避免按 `<html lang>` 去 XHR 拉
+`localization/*.js` 造成 404 请求），并加 `<link rel="icon" href="data:,">`（消除 favicon 请求）。
+
 ## CLI
 
 ```bash
