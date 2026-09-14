@@ -1,0 +1,52 @@
+[build-system]
+requires = ["uv_build>=0.8.17,<0.9.0"]
+build-backend = "uv_build"
+
+[project.scripts]
+bili-summary = "bili_summary.cli:main"
+
+[project]
+name = "bili-summary"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "faster-whisper>=1.2.1",
+    "httpx>=0.28.1",
+    "markdown>=3.10.3",
+    "numpy>=2.5.3",
+    "pillow>=12.3.0",
+    "pydantic>=2.13.5",
+    "pyyaml>=6.0.3",
+    "rich>=15.0.0",
+    "typer>=0.27.2",
+]
+
+[dependency-groups]
+dev = ["ruff>=0.16.7"]
+
+# ---------------------------------------------------------------- 代码规范
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "PIE", "RUF"]
+ignore = [
+    "BLE001",   # 管线中"宽泛捕获 + 重试/降级"是有意设计
+    "E501",     # 行宽交给 formatter
+    "RUF001",   # 允许中文标点
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# typer/click 命令参数不一定都被函数体用到; 编排函数天然偏长
+"src/bili_summary/pipeline.py" = ["ARG001"]
+"src/bili_summary/segment/cli.py" = ["ARG001"]
+"src/bili_summary/acquire/cli.py" = ["ARG001"]
+"src/bili_summary/describe/fuse.py" = ["ARG001"]
+
+[tool.ruff.format]
+quote-style = "double"
+
