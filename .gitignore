@@ -32,3 +32,6 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+
+# B站 cookies(由 SESSDATA 自动生成)
+.bili_cookies.txt

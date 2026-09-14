@@ -3,11 +3,30 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
 
 from ..config import sessdata
+
+BILI_RE = re.compile(r"(bilibili\.com|bilivideo\.com)", re.I)
+
+
+def _write_cookies(path: Path, sessdata_val: str) -> None:
+    """写 Netscape 格式 cookies 文件。
+
+    比 `--add-headers "Cookie: ..."` 可靠得多 —— 后者已被 yt-dlp 标记废弃,
+    且会按"下载 URL 的域名"做作用域限制, 常常**传不到 CDN 域名**,
+    导致 CDN 侧按匿名请求限速/断流。
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "# Netscape HTTP Cookie File\n"
+        f".bilibili.com\tTRUE\t/\tTRUE\t0\tSESSDATA\t{sessdata_val}\n",
+        encoding="utf-8",
+    )
+    os.chmod(path, 0o600)
 
 
 def _slug(text: str, n: int = 40) -> str:
@@ -15,7 +34,13 @@ def _slug(text: str, n: int = 40) -> str:
     return s[:n] or "video"
 
 
-def download(url: str, outdir: str | Path, max_height: int = 720, use_cookie: bool = True) -> dict:
+def download(
+    url: str,
+    outdir: str | Path,
+    max_height: int = 720,
+    use_cookie: bool = True,
+    cookie_file: str | Path | None = None,
+) -> dict:
     """下载视频(合并音轨) + 写 info.json。返回 {video, info, title, duration, bvid}。"""
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
@@ -34,10 +59,23 @@ def download(url: str, outdir: str | Path, max_height: int = 720, use_cookie: bo
             "cached": True,
         }
 
+    is_bili = bool(BILI_RE.search(url))
     cmd = [
         "yt-dlp",
         "--no-warnings",
         "--write-info-json",
+        # 网络健壮性: B站 CDN 会中途断流, 分块下载让每次只重试一小块而不是整个文件
+        "--retries",
+        "20",
+        "--fragment-retries",
+        "20",
+        "--retry-sleep",
+        "exp=1:20",
+        "--socket-timeout",
+        "30",
+        "--http-chunk-size",
+        "10M",
+        "--force-ipv4",
         "-f",
         f"bv*[height<={max_height}]+ba/b[height<={max_height}]",
         "--merge-output-format",
@@ -46,15 +84,16 @@ def download(url: str, outdir: str | Path, max_height: int = 720, use_cookie: bo
         str(outdir / "video.%(ext)s"),
         url,
     ]
+    if is_bili:
+        # B站是国内站点: 走本机代理会多一跳且更容易被掐断
+        cmd[1:1] = ["--proxy", ""]
     if use_cookie:
         sess = sessdata()
         if sess:
-            cmd[1:1] = [
-                "--add-headers",
-                f"Cookie: SESSDATA={sess}",
-                "--add-headers",
-                "Referer: https://www.bilibili.com/",
-            ]
+            ck = Path(cookie_file) if cookie_file else (outdir.parent / ".bili_cookies.txt")
+            _write_cookies(ck, sess)
+            cmd[1:1] = ["--cookies", str(ck)]
+
     subprocess.run(cmd, check=True)
     # yt-dlp 写的是 video.info.json
     produced = outdir / "video.info.json"
